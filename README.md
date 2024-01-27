@@ -20,6 +20,7 @@ The main objective of this project is to train myself on various SQL queries by 
 
 The repository is organized as follows: 
   - `/data` is the directory where you put your csv files.
+  - `/configuration` is the directory where you need to store variables to connect to the database.
   - `csv_to_databse.py` contains code to integrate data from csv files into your database.
   - `SQLSolutions.py` contains my SQL queries to answer the various questions.
   
