@@ -112,3 +112,65 @@ query6 = conn.execute(
     "
     )
 )
+
+# NOTE:
+# If the code above doesn't give exactly the right number of rows,
+# it's because at least one column contains NULLs. Simply replace
+# them with another value, such as -99.
+
+
+# ------------- Query 7 -------------
+# Identify the museums with invalid city information in the given dataset
+
+# For this question, I used regular expressions to retrieve
+# lines containing numeric characters for the 'city' column
+query7 = conn.execute(
+    text(
+        "select * from museum\
+         where regexp_like(city, '^[0-9]+$');  # '^[0-9]+$' means a string containing only numbers\
+        "
+    )
+)
+
+
+# ------------- Query 9 -------------
+# Fetch the top 10 most famous painting subject
+
+query9 = conn.execute(
+    text(
+        "\
+        select subject, count(subject) as cnt_subject from subject\
+        group by subject\
+        order by cnt_subject desc\
+        limit 10;\
+    "
+    )
+)
+
+# ------------- Query 10 -------------
+# Identify the museums which are open on both Sunday and Monday
+# Display museum name, city
+
+# The idea is to create a column worth 1 when the museum is open
+# on Monday and/or Sunday (0 otherwise), and to group the data
+# by museum by summing this column
+query10 = conn.execute(
+    text(
+        "with \
+                museum_1 as (select museum_id,\
+                    case when day in ('Sunday', 'Monday') then 1\
+                    else 0 end as top_sunday_monday\
+                    FROM museum_hours),\
+        \
+                museum_2 as (select museum_id,\
+                    sum(top_sunday_monday) as open_sunday_monday from museum_1\
+                    group by museum_id)\
+    \
+    select m.name, m.city from museum_2 as m2\
+    join \
+    museum as m\
+    on (m2.museum_id=m.museum_id)\
+    where open_sunday_monday = 2;\
+    "
+    )
+)
