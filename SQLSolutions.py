@@ -327,3 +327,120 @@ query16 = conn.execute(
     """
     )
 )
+
+
+# ------------- Query 14 -------------
+# Display the 3 least popular canva sizes
+
+query14 = conn.execute(
+    text(
+        """
+        with count_work_by_size as (
+            select size_id, count(work_id) as cnt_work from product_size
+            where size_id = round(size_id)  # size_id has to be an integer
+            group by size_id),
+
+            count_rnk as (
+            select *, dense_rank() over(order by cnt_work asc) as rnk from count_work_by_size)
+
+        select * from count_rnk as cr
+        where cr.rnk <= 3;  # We keep only ranks below 3
+        """
+    )
+)
+
+
+# ------------- Query 15 -------------
+# Which museum is open for the longest during a day. Dispay museum name, state
+# and hours open and which day ?
+
+# We start by calculating how long each museum is open on different days
+# Then we create a column of rank to select the museum with the longest opening day
+query15 = conn.execute(
+    text(
+        """
+        with museum_hours_1 as (select museum_id, day, open, close,
+                         str_to_date(close,'%h:%i:%p') - str_to_date(open,'%h:%i:%p') as duration_in_hour
+                         from museum_hours),
+
+            museum_hours_2 as (select *,
+                         rank() over (order by duration_in_hour desc) as rnk
+                         from museum_hours_1)
+
+        select name, state as city, day, open, close,
+               duration_in_hour as 'duration_in_hour (hh mi ss)'
+        from museum_hours_2 as m2
+        join museum as m
+        on (m.museum_id = m2.museum_id)
+
+        where rnk = 1;  # We keep the longest day
+    """
+    )
+)
+
+# ------------- Query 16 -------------
+# Which museum has the most no of most popular painting style ?
+
+# We start by calculating the most popular style
+# Then we find out which museum exhibits the most paintings in this style
+query16 = conn.execute(
+    text(
+        """
+        with most_pop_painting as (
+                    select style from (
+                    select style, count(name) as cnt_style from work
+                    group by style
+                    order by cnt_style desc
+                    limit 1) as x),
+
+            museum_most_pop_painting as (
+                    select museum_id, count(*) as cnt_most_pop_painting, min(style) as style from work
+                    where style in (select style from most_pop_painting) and museum_id is not null
+                    group by museum_id
+                    order by cnt_most_pop_painting desc
+                    limit 1)
+
+        select m.museum_id, m.name, m.city, museum_most_pop_painting.style,
+        museum_most_pop_painting.cnt_most_pop_painting
+
+        from museum_most_pop_painting
+        join
+        museum as m
+
+        on (museum_most_pop_painting.museum_id = m.museum_id);
+    """
+    )
+)
+
+# ------------- Query 17 -------------
+# Identify the artists whose paintings are displayed in multiple countries
+
+# We calculate the number of countries in which each artist has paintings displayed,
+# then keep only those whose paintings are displayed at least in two countries.
+query17 = conn.execute(
+    text(
+        """
+        with artist_country as (
+            select artist_id, count(distinct country) as cnt_country from (
+                select w.artist_id, m.country
+                from museum m
+                join
+                work w
+                on (m.museum_id = w.museum_id)) as x
+            group by artist_id
+            order by cnt_country desc)
+
+
+    select ac.artist_id, ac.cnt_country, a.full_name,
+    a.nationality, a.style
+
+    from artist_country ac
+    join
+    artist a
+
+    on (ac.artist_id = a.artist_id
+    and ac.cnt_country >= 2)  # We select artists who are displayed at least in two different countries
+    order by ac.cnt_country desc;
+    """
+    )
+)
