@@ -181,3 +181,86 @@ query10 = conn.execute(
     """
     )
 )
+
+# ------------- Query 11 -------------
+#  How many museums are open every single day ?
+
+query11 = conn.execute(
+    text(
+        """
+        select count(*) as cnt_open_every_day from(
+            select museum_id, count(day) as cnt_day from museum_hours
+            group by museum_id
+            having cnt_day = 7
+        ) x;
+        """
+    )
+)
+
+# ------------- Query 12 -------------
+# Which are the top 5 most popular museum ? (Popularity is defined based on most
+# no of paintings in a museum)
+
+query12 = conn.execute(
+    text(
+        """
+        select top_5_museum.museum_id, top_5_museum.cnt_paintings, m.name,  m.city
+
+        from (select museum_id, count(name) as cnt_paintings from work
+        where museum_id is not null
+        group by museum_id
+        order by cnt_paintings desc
+        limit 5) as top_5_museum
+
+        join
+
+        museum as m
+
+        on (top_5_museum.museum_id = m.museum_id);
+        """
+    )
+)
+
+# ------------- Query 13 -------------
+# Who are the top 5 most popular artist ? (Popularity is defined based on most no of
+# paintings done by an artist)
+
+query13 = conn.execute(
+    text(
+        """
+        select top_5_artist.artist_id, top_5_artist.cnt_paintings,
+        a.full_name, a.nationality, a.style
+
+        from (select artist_id, count(name) as cnt_paintings from work
+        group by artist_id
+        order by cnt_paintings desc
+        limit 5) as top_5_artist
+
+        join
+
+        artist as a
+
+        on (top_5_artist.artist_id = a.artist_id);
+        """
+    )
+)
+
+# ------------- Query 14 -------------
+# Display the 3 least popular canva sizes
+
+query14 = conn.execute(
+    text(
+        """
+        with count_work_by_size as (
+            select size_id, count(work_id) as cnt_work from product_size
+            where size_id = round(size_id)  # size_id has to be an integer
+            group by size_id),
+
+            count_rnk as (
+            select *, dense_rank() over(order by cnt_work asc) as rnk from count_work_by_size)
+
+        select * from count_rnk as cr
+        where cr.rnk <= 3; # We keep only ranks below 3
+        """
+    )
+)
