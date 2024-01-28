@@ -22,56 +22,61 @@ conn = engine.connect()  # Connection to the database
 # Fetch all the paintings which are not displayed on any museums
 query1 = conn.execute(
     text(
-        "\
-        select distinct name from work\
-        where museum_id is NULL;\
-        ")
+        """
+        select distinct name from work
+        where museum_id is null;
+        """
     )
+)
 
 # ------------- Query 2 -------------
 # Are there museums without any paintings ?
 query2 = conn.execute(
     text(
-        "\
-        select distinct museum_id from museum\
-        where museum_id NOT IN (select distinct museum_id from work);\
-        ")
+        """
+        select distinct museum_id from museum
+        where museum_id NOT IN (select distinct museum_id from work);
+        """
     )
+)
 
 # ------------- Query 3 -------------
 # How many paintings have an asking price of more than their regular price ?
 query3 = conn.execute(
     text(
-        "\
-        select distinct work_id from product_size\
-        where sale_price > regular_price;\
-        ")
+        """
+        select distinct work_id from product_size
+        where sale_price > regular_price;
+        """
     )
+)
 
 # ------------- Query 4 -------------
 # Identify the paintings whose asking price is less than 50% of its regular price
 query4 = conn.execute(
     text(
-        "\
-        select distinct name from product_size as ps\
-        join work as w\
-        where (ps.work_id = w.work_id\
-        and sale_price < 0.5*regular_price);\
-        ")
+        """
+        select distinct name from product_size as ps
+        join work as w
+        where (ps.work_id = w.work_id
+        and sale_price < 0.5*regular_price);
+        """
     )
+)
 
 # ------------- Query 5 -------------
 # Which canva size costs the most ?
 query5 = conn.execute(
     text(
-        "\
-        select distinct cs.size_id, sale_price from canvas_size as cs\
-        join product_size as ps\
-        where (cs.size_id = ps.size_id)\
-        order by sale_price desc\
-        limit 1;\
-        ")
+        """
+        select distinct cs.size_id, sale_price from canvas_size as cs
+        join product_size as ps
+        where (cs.size_id = ps.size_id)
+        order by sale_price desc
+        limit 1;
+        """
     )
+)
 
 
 # ------------- Query 6 -------------
@@ -85,31 +90,31 @@ query5 = conn.execute(
 # select (select count(*) as cnt from table_name) - (select count(*) cnt_distinct from (select distinct * from table_name) x) as diff;
 query6 = conn.execute(
     text(
-        "\
-         create table product_size_no_duplicate as\
-                \
-            select ps1.work_id, ps1.size_id, ps1.sale_price, ps1.regular_price\
-            from (select *, row_number() over (partition by work_id, size_id, sale_price, regular_price) as rn\
-            from product_size) as ps1\
-                \
-            join\
-                \
-            (select *, row_number() over (partition by work_id, size_id, sale_price, regular_price)  as rn\
-            from product_size) as ps2\
-                \
-            on (ps1.work_id = ps2.work_id\
-            and ps1.size_id = ps2.size_id\
-            and ps1.sale_price = ps2.sale_price\
-            and ps1.regular_price = ps2.regular_price\
-            and (ps1.rn=1 and ps2.rn=1));\
-                \
-        delete from product_size;\
-            \
-        insert into product_size\
-        select * from product_size_no_duplicate;\
-            \
-        drop table product_size_no_duplicate;\
-    "
+        """
+        create table product_size_no_duplicate as
+
+            select ps1.work_id, ps1.size_id, ps1.sale_price, ps1.regular_price
+            from (select *, row_number() over (partition by work_id, size_id, sale_price, regular_price) as rn
+            from product_size) as ps1
+
+            join
+
+            (select *, row_number() over (partition by work_id, size_id, sale_price, regular_price)  as rn
+            from product_size) as ps2
+
+            on (ps1.work_id = ps2.work_id
+            and ps1.size_id = ps2.size_id
+            and ps1.sale_price = ps2.sale_price
+            and ps1.regular_price = ps2.regular_price
+            and (ps1.rn=1 and ps2.rn=1));
+
+        delete from product_size;
+
+        insert into product_size
+        select * from product_size_no_duplicate;
+
+        drop table product_size_no_duplicate;
+    """
     )
 )
 
@@ -126,9 +131,10 @@ query6 = conn.execute(
 # lines containing numeric characters for the 'city' column
 query7 = conn.execute(
     text(
-        "select * from museum\
-         where regexp_like(city, '^[0-9]+$');  # '^[0-9]+$' means a string containing only numbers\
-        "
+        """"
+        select * from museum
+         where regexp_like(city, '^[0-9]+$');  # '^[0-9]+$' means a string containing only numbers
+        """
     )
 )
 
@@ -138,12 +144,12 @@ query7 = conn.execute(
 
 query9 = conn.execute(
     text(
-        "\
-        select subject, count(subject) as cnt_subject from subject\
-        group by subject\
-        order by cnt_subject desc\
-        limit 10;\
-    "
+        """"
+        select subject, count(subject) as cnt_subject from subject
+        group by subject
+        order by cnt_subject desc
+        limit 10;
+    """
     )
 )
 
@@ -156,21 +162,22 @@ query9 = conn.execute(
 # by museum by summing this column
 query10 = conn.execute(
     text(
-        "with \
-                museum_1 as (select museum_id,\
-                    case when day in ('Sunday', 'Monday') then 1\
-                    else 0 end as top_sunday_monday\
-                    FROM museum_hours),\
-        \
-                museum_2 as (select museum_id,\
-                    sum(top_sunday_monday) as open_sunday_monday from museum_1\
-                    group by museum_id)\
-    \
-    select m.name, m.city from museum_2 as m2\
-    join \
-    museum as m\
-    on (m2.museum_id=m.museum_id)\
-    where open_sunday_monday = 2;\
-    "
+        """
+        with
+            museum_1 as (select museum_id,
+                case when day in ('Sunday', 'Monday') then 1
+                else 0 end as top_sunday_monday
+                FROM museum_hours),
+
+            museum_2 as (select museum_id,
+                sum(top_sunday_monday) as open_sunday_monday from museum_1
+                group by museum_id)
+
+        select m.name, m.city from museum_2 as m2
+        join
+        museum as m
+        on (m2.museum_id=m.museum_id)
+        where open_sunday_monday = 2;
+    """
     )
 )
