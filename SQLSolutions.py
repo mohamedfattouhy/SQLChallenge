@@ -444,3 +444,88 @@ query17 = conn.execute(
     """
     )
 )
+
+# ------------- Query 18 -------------
+# Display the country and the city with most no of museums.
+# Output 2 seperate columns to mention the city and country.
+# If there are multiple value, seperate them with comma.
+
+
+query18 = conn.execute(
+    text(
+        """
+        with
+            museum_by_city as (select city, count(distinct museum_id) as cnt_museum_by_city,
+            rank() over (order by count(distinct museum_id) desc) as rnk from museum
+            group by city),
+
+            museum_by_country as (select country, count(distinct museum_id) as cnt_museum_by_country,
+            rank() over (order by count(distinct museum_id) desc) as rnk  from museum
+            group by country)
+
+        select group_concat(city) as cities, max(cnt_museum_by_city) as cnt_museum_city,
+        group_concat(country, ' ') as country, max(cnt_museum_by_country) as cnt_museum_country
+        from museum_by_city, museum_by_country
+
+        where museum_by_city.rnk = 1
+        and museum_by_country.rnk = 1;
+    """
+    )
+)
+
+# ------------- Query 19 -------------
+# Identify the artist and the museum where the most expensive and least expensive
+# painting is placed. Display the artist name, sale_price, painting name, museum
+# name, museum city and canvas label
+
+# We calculate which paint is the cheapest and which is the most expensive,
+# then add the necessary information as we go along.
+query19 = conn.execute(
+    text(
+        """
+        with least_and_most_expensive as (
+            select work_id, sale_price, size_id from product_size
+            where sale_price = (select min(sale_price) from product_size)
+            union
+            select work_id, sale_price, size_id from product_size
+            where sale_price = (select max(sale_price) from product_size)
+            ),
+
+            add_id as (
+                select least_and_most_expensive.*,
+                w.name as painting_name, w.artist_id, w.museum_id
+                from least_and_most_expensive
+                join
+                work as w
+                on (least_and_most_expensive.work_id = w.work_id)
+            ),
+
+            add_artist_name as (
+                select add_id.*, artist.full_name
+                from add_id
+                join
+                artist
+                on (add_id.artist_id = artist.artist_id)
+            ),
+
+            add_museum_informations as (
+                select add_artist_name.*, museum.name as museum_name, museum.city
+                from add_artist_name
+                join
+                museum
+                on (add_artist_name.museum_id = museum.museum_id)
+            ),
+
+            add_canvas_label as (
+                select add_museum_informations.*, canvas_size.label
+                from add_museum_informations
+                join
+                canvas_size
+                on (add_museum_informations.size_id = canvas_size.size_id)
+            )
+
+        select painting_name, sale_price, full_name,
+        museum_name, city, label from add_canvas_label;
+    """
+    )
+)
