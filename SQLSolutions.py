@@ -260,7 +260,36 @@ query14 = conn.execute(
             select *, dense_rank() over(order by cnt_work asc) as rnk from count_work_by_size)
 
         select * from count_rnk as cr
-        where cr.rnk <= 3; # We keep only ranks below 3
+        where cr.rnk <= 3;  # We keep only ranks below 3
         """
+    )
+)
+
+
+# ------------- Query 15 -------------
+# Which museum is open for the longest during a day. Dispay museum name, state
+# and hours open and which day ?
+
+# We start by calculating how long each museum is open on different days
+# Then we create a column of rank to select the museum with the longest opening day
+query15 = conn.execute(
+    text(
+        """
+        with museum_hours_1 as (select museum_id, day, open, close,
+                         str_to_date(close,'%h:%i:%p') - str_to_date(open,'%h:%i:%p') as duration_in_hour
+                         from museum_hours),
+
+            museum_hours_2 as (select *,
+                         rank() over (order by duration_in_hour desc) as rnk
+                         from museum_hours_1)
+
+        select name, state as city, day, open, close,
+               duration_in_hour as 'duration_in_hour (hh mi ss)'
+        from museum_hours_2 as m2
+        join museum as m
+        on (m.museum_id = m2.museum_id)
+
+        where rnk = 1;  # We keep the longest day
+    """
     )
 )
