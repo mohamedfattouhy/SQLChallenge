@@ -293,3 +293,37 @@ query15 = conn.execute(
     """
     )
 )
+
+# ------------- Query 16 -------------
+# Which museum has the most no of most popular painting style ?
+
+# We start by calculating the most popular style
+# Then we find out which museum exhibits the most paintings in this style
+query16 = conn.execute(
+    text(
+        """
+        with most_pop_painting as (
+                    select style from (
+                    select style, count(name) as cnt_style from work
+                    group by style
+                    order by cnt_style desc
+                    limit 1) as x),
+
+            museum_most_pop_painting as (
+                    select museum_id, count(*) as cnt_most_pop_painting, min(style) as style from work
+                    where style in (select style from most_pop_painting) and museum_id is not null
+                    group by museum_id
+                    order by cnt_most_pop_painting desc
+                    limit 1)
+
+        select m.museum_id, m.name, m.city, museum_most_pop_painting.style,
+        museum_most_pop_painting.cnt_most_pop_painting
+
+        from museum_most_pop_painting
+        join
+        museum as m
+
+        on (museum_most_pop_painting.museum_id = m.museum_id);
+    """
+    )
+)
