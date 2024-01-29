@@ -606,27 +606,30 @@ query22 = conn.execute(
         """
         with
 
-            painting_information as (
-                select a.artist_id, a.full_name, a.nationality,
-                w.work_id, w.museum_id, w.name,
-                m.country
+        painting_information as (
+            select distinct a.artist_id, a.full_name, a.nationality,
+            w.work_id, w.museum_id, w.name,
+            m.country, s.subject
 
-                from artist a
-                join
-                work w
-                on (a.artist_id = w.artist_id)
-                join
-                museum m
-                on (w.museum_id = m.museum_id)),
+            from artist a
+            join
+            work w
+            on (a.artist_id = w.artist_id)
+            join subject s
+            on (w.work_id = s.work_id)
+            join
+            museum m
+            on (w.museum_id = m.museum_id)),
 
             cnt_by_artist_and_country as (select full_name, nationality, country,
                 count(*) over(partition by artist_id) as cnt from painting_information
-                where country <> 'USA'),
+                where country <> 'USA'
+                and subject = 'Portraits'),
 
             cnt_outside_usa as (select full_name, nationality, cnt,
                 rank() over(order by cnt desc) as rnk from cnt_by_artist_and_country)
 
-        select distinct full_name, nationality, cnt as most_painting_outside_usa
+        select distinct full_name, nationality, cnt as most_portrait_painting_outside_usa
         from cnt_outside_usa
         where rnk = 1;
         """
