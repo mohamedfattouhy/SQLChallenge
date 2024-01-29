@@ -598,28 +598,28 @@ query21 = conn.execute(
 # Display artist name, no of paintings and the artist nationality.
 
 # All information about the paintings (artist name, museum name,
-# work name, etc.) is retrieved from a table.
-# Then we calculate the number of paintings per artist outside the USA.
+# work name, etc.) is gathered in a single table.
+# Then, from thistable, we calculate the number of portraits paintings per artist outside the USA.
 # Finally, we keep the one with the most.
 query22 = conn.execute(
     text(
         """
         with
 
-        painting_information as (
-            select distinct a.artist_id, a.full_name, a.nationality,
-            w.work_id, w.museum_id, w.name,
-            m.country, s.subject
+            painting_information as (
+                select distinct a.artist_id, a.full_name, a.nationality,
+                w.work_id, w.museum_id, w.name,
+                m.country, s.subject
 
-            from artist a
-            join
-            work w
-            on (a.artist_id = w.artist_id)
-            join subject s
-            on (w.work_id = s.work_id)
-            join
-            museum m
-            on (w.museum_id = m.museum_id)),
+                from artist a
+                join
+                work w
+                on (a.artist_id = w.artist_id)
+                join subject s
+                on (w.work_id = s.work_id)
+                join
+                museum m
+                on (w.museum_id = m.museum_id)),
 
             cnt_by_artist_and_country as (select full_name, nationality, country,
                 count(*) over(partition by artist_id) as cnt from painting_information
