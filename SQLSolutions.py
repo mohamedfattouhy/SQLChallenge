@@ -540,3 +540,55 @@ query19 = conn.execute(
     """
     )
 )
+
+
+# ------------- Query 20 -------------
+# Which country has the 5th highest no of paintings ?
+
+# We calculate which paint is the cheapest and which is the most expensive,
+# then add the necessary information as we go along.
+query20 = conn.execute(
+    text(
+        """
+        with
+            museum_with_country as (
+            select w.*, m.country from work as w
+            join museum as m
+            on (w.museum_id = m.museum_id)),
+
+            cnt_museum_by_country as (
+            select country,
+                count(name) as cnt_painting, rank() over(order by count(name)desc) as rnk
+                from museum_with_country
+                group by country)
+
+        select * from cnt_museum_by_country
+        where rnk = 5;
+"""
+    )
+)
+
+# ------------- Query 21 -------------
+# Which are the 3 most popular and 3 least popular painting styles ?
+
+# We calculate the 3 most popular and the 3 least popular painting styles
+# then we join the results together
+query21 = conn.execute(
+    text(
+        """
+        select least_popular.* from (select style, count(style) as cnt_style, 'least popular' as popularity from work
+        where style <> ''
+        group by style
+        order by cnt_style asc
+        limit 3) as least_popular
+
+        union
+
+        select most_popular.* from (select style, count(style) as cnt_style, 'most popular' as popularity from work
+        where style <> ''
+        group by style
+        order by cnt_style desc
+        limit 3) as most_popular;
+    """
+    )
+)
