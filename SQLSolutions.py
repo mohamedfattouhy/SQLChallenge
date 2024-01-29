@@ -138,6 +138,17 @@ query7 = conn.execute(
     )
 )
 
+# ------------- Query 8 -------------
+# Museum_Hours table has 1 invalid entry. Identify it and remove it.
+
+query8 = conn.execute(
+    text(
+        """"
+        delete from museum_hours
+        where open >= str_to_date('12:01:PM','%h:%i:%p');
+    """
+    )
+)
 
 # ------------- Query 9 -------------
 # Fetch the top 10 most famous painting subject
