@@ -571,7 +571,7 @@ query20 = conn.execute(
 # ------------- Query 21 -------------
 # Which are the 3 most popular and 3 least popular painting styles ?
 
-# We calculate the 3 most popular and the 3 least popular painting styles
+# We calculate the 3 most popular and the 3 least popular painting styles,
 # then we join the results together
 query21 = conn.execute(
     text(
@@ -590,5 +590,45 @@ query21 = conn.execute(
         order by cnt_style desc
         limit 3) as most_popular;
     """
+    )
+)
+
+# ------------- Query 22 -------------
+# Which artist has the most no of Portraits paintings outside USA ?
+# Display artist name, no of paintings and the artist nationality.
+
+# All information about the paintings (artist name, museum name,
+# work name, etc.) is retrieved from a table.
+# Then we calculate the number of paintings per artist outside the USA.
+# Finally, we keep the one with the most.
+query22 = conn.execute(
+    text(
+        """
+        with
+
+            painting_information as (
+                select a.artist_id, a.full_name, a.nationality,
+                w.work_id, w.museum_id, w.name,
+                m.country
+
+                from artist a
+                join
+                work w
+                on (a.artist_id = w.artist_id)
+                join
+                museum m
+                on (w.museum_id = m.museum_id)),
+
+            cnt_by_artist_and_country as (select full_name, nationality, country,
+                count(*) over(partition by artist_id) as cnt from painting_information
+                where country <> 'USA'),
+
+            cnt_outside_usa as (select full_name, nationality, cnt,
+                rank() over(order by cnt desc) as rnk from cnt_by_artist_and_country)
+
+        select distinct full_name, nationality, cnt as most_painting_outside_usa
+        from cnt_outside_usa
+        where rnk = 1;
+        """
     )
 )
